@@ -132,7 +132,7 @@ def movie_hash(name):
     f.close()
     return "%016x" % hash
 
-def SearchSubtitles(filename, langs_search):
+def SearchSubtitlesByHash(filename, langs_search):
     moviehash = movie_hash(filename)
     moviebytesize = os.path.getsize(filename)
     searchlist = [({'sublanguageid':langs_search,
@@ -343,7 +343,7 @@ def main(args):
     file = parseargs(args)
     if not os.path.exists(file):
         raise SystemExit("can't find file '%s'"%file)
-    search_results = SearchSubtitles(file, options.lang)
+    search_results = SearchSubtitlesByHash(file, options.lang)
     if not search_results:
         raise SystemExit("No results found.")
     DisplaySubtitleSearchResults(search_results)
