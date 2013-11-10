@@ -37,6 +37,7 @@ Options:
   --existing=bypass    Exit gracefully if output filename already exists.
   --existing=overwrite Overwrite if output filename already exists.
   --existing=query     Query whether to overwrite.
+  --imdb-id=id         Query by IMDB id. If specified, no hash is used.
   --interactive, -i    Equivalent to --download=query --existing=query.
   '''
 
@@ -67,6 +68,7 @@ options.lang = 'eng'
 options.download = 'first'
 options.output = None
 options.existing = 'abort'
+options.imdb_id = None
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -139,6 +141,17 @@ def SearchSubtitlesByHash(filename, langs_search):
                     'moviehash':moviehash,
                     'moviebytesize':str(moviebytesize)})]
     print >>sys.stderr, "Searching for subtitles for moviehash=%s..." %(moviehash)
+    try:
+        results = xmlrpc_server.SearchSubtitles(osdb_token,searchlist)
+    except Exception, e:
+        raise SystemExit("Error in XMLRPC SearchSubtitles call: %s"%e)
+    data = results['data']
+    return data and [SubtitleSearchResult(d) for d in data]
+
+def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
+    searchlist = [({'sublanguageid':langs_search,
+                    'imdbid':imdb_id})]
+    print >>sys.stderr, "Searching for subtitles for IMDB id=%s..." %(imdb_id)
     try:
         results = xmlrpc_server.SearchSubtitles(osdb_token,searchlist)
     except Exception, e:
@@ -295,7 +308,7 @@ def parseargs(args):
         opts, arguments = getopt.getopt(args, 'h?in', [
                 'existing=', 'lang=', 'search-only=',
                 'download=', 'output=', 'interactive',
-                'list-languages',
+                'list-languages', 'imdb-id=',
                 'help', 'version', 'versionx'])
     except getopt.GetoptError, e:
         raise SystemExit("%s: %s (see --help)"%(sys.argv[0],e))
@@ -326,6 +339,8 @@ def parseargs(args):
             options.download = 'none'
         elif option == '--output':
             options.output = value
+        elif option == '--imdb-id':
+            options.imdb_id = value
         elif option == '--interactive' or option == '-i':
             options.download = 'query'
             options.existing = 'query'
@@ -343,7 +358,10 @@ def main(args):
     file = parseargs(args)
     if not os.path.exists(file):
         raise SystemExit("can't find file '%s'"%file)
-    search_results = SearchSubtitlesByHash(file, options.lang)
+    if options.imdb_id == None:
+        search_results = SearchSubtitlesByHash(file, options.lang)
+    else:
+        search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
     if not search_results:
         raise SystemExit("No results found.")
     DisplaySubtitleSearchResults(search_results)
