@@ -37,7 +37,9 @@ Options:
   --existing=bypass    Exit gracefully if output filename already exists.
   --existing=overwrite Overwrite if output filename already exists.
   --existing=query     Query whether to overwrite.
-  --imdb-id=id         Query by IMDB id. If specified, no hash is used.
+  --imdb-id=id         Query by IMDB id. Hash is tried first unless --force-imdb
+                         is used.
+  --force-imdb         Force IMDB search. --imdb-id must be specified.
   --interactive, -i    Equivalent to --download=query --existing=query.
   '''
 
@@ -69,6 +71,7 @@ options.download = 'first'
 options.output = None
 options.existing = 'abort'
 options.imdb_id = None
+options.force_imdb = False;
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -308,7 +311,7 @@ def parseargs(args):
         opts, arguments = getopt.getopt(args, 'h?in', [
                 'existing=', 'lang=', 'search-only=',
                 'download=', 'output=', 'interactive',
-                'list-languages', 'imdb-id=',
+                'list-languages', 'imdb-id=', 'force-imdb',
                 'help', 'version', 'versionx'])
     except getopt.GetoptError, e:
         raise SystemExit("%s: %s (see --help)"%(sys.argv[0],e))
@@ -341,6 +344,8 @@ def parseargs(args):
             options.output = value
         elif option == '--imdb-id':
             options.imdb_id = value
+        elif option == '--force-imdb':
+            options.force_imdb = True
         elif option == '--interactive' or option == '-i':
             options.download = 'query'
             options.existing = 'query'
@@ -358,10 +363,15 @@ def main(args):
     file = parseargs(args)
     if not os.path.exists(file):
         raise SystemExit("can't find file '%s'"%file)
-    if options.imdb_id == None:
-        search_results = SearchSubtitlesByHash(file, options.lang)
-    else:
+    if options.force_imdb:
+        if options.imdb_id == None:
+            raise SystemExit("With --force-imdb a --imdb-id must be provided.")
         search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
+    else:
+        search_results = SearchSubtitlesByHash(file, options.lang)
+        if not search_results and options.imdb_id != None:
+            print "No results found by hash, trying IMDB id";
+            search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
     if not search_results:
         raise SystemExit("No results found.")
     DisplaySubtitleSearchResults(search_results)
