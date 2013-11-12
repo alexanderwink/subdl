@@ -38,7 +38,7 @@ Options:
   --existing=overwrite Overwrite if output filename already exists.
   --existing=query     Query whether to overwrite.
   --imdb-id=id         Query by IMDB id. Hash is tried first unless --force-imdb
-                         is used.
+                         is used. IMDB URLs are also accepted.
   --force-imdb         Force IMDB search. --imdb-id must be specified.
   --interactive, -i    Equivalent to --download=query --existing=query.
   '''
@@ -58,6 +58,7 @@ import struct
 import xmlrpclib
 import StringIO, gzip, base64
 import getopt
+import re
 
 osdb_server = "http://api.opensubtitles.org/xml-rpc"
 xmlrpc_server = xmlrpclib.Server(osdb_server)
@@ -152,6 +153,8 @@ def SearchSubtitlesByHash(filename, langs_search):
     return data and [SubtitleSearchResult(d) for d in data]
 
 def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
+    result = re.search("\d+", imdb_id);
+    imdb_id = result.group(0);
     searchlist = [({'sublanguageid':langs_search,
                     'imdbid':imdb_id})]
     print >>sys.stderr, "Searching for subtitles for IMDB id=%s..." %(imdb_id)
