@@ -4,7 +4,7 @@ Version 1.03
 
 Released under GPLv3+.
 
-http://code.google.com/p/subdl/
+https://github.com/akexakex/subdl
 
 See ``subdl -h'' for usage.
 
