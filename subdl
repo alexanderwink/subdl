@@ -206,7 +206,7 @@ def DisplaySubtitleSearchResults(search_results):
                                                 rating.rjust(4),
                                                 downloads.rjust(downloads_maxlen),
                                                 moviename.ljust(moviename_maxlen),
-                                                filename)
+                                                filename.encode('utf8'))
 
 def DownloadSubtitle(sub_id):
     '''Download subtitle #sub_id and return subtitle text as string.'''
