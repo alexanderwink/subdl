@@ -5,7 +5,7 @@
 # Uses code from subdownloader (a GUI app).
 
 __doc__ = '''\
-Syntax: subdl [options] moviefile.avi
+Syntax: subdl [options] moviefile.avi ...
 
 Subdl is a command-line tool for downloading subtitles from opensubtitles.org.
 
@@ -355,44 +355,58 @@ def parseargs(args):
             raise SystemExit("internal error: bad option '%s'" % option)
     if not options.output:
         options.output = default_output_fmt()
-    if len(arguments) != 1:
+    if len(arguments) == 0:
         raise SystemExit("syntax: %s [options] filename.avi  (see --help)" % (sys.argv[0]))
-    return arguments[0]
+    if len(arguments) > 1 and options.force_imdb:
+        raise SystemExit("Can't use --force-imdb with multiple files.")
+    if len(arguments) > 1 and isnumber(options.download):
+        raise SystemExit("Can't use --download=ID with multiple files.")
+
+    return arguments
+
 
 def main(args):
-    file = parseargs(args)
-    if not os.path.exists(file):
-        raise SystemExit("can't find file '%s'" % file)
-    if options.force_imdb:
-        if options.imdb_id is None:
-            raise SystemExit("With --force-imdb a --imdb-id must be provided.")
-        search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
-    else:
-        search_results = SearchSubtitlesByHash(file, options.lang)
-        if not search_results and options.imdb_id is not None:
-            print("No results found by hash, trying IMDB id")
+    files = parseargs(args)
+    no_search_results = 0
+    for file in files:
+        if not os.path.exists(file):
+            raise SystemExit("can't find file '%s'" % file)
+        if options.force_imdb:
+            if options.imdb_id is None:
+                raise SystemExit("With --force-imdb a --imdb-id must be provided.")
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
-    if not search_results:
-        raise SystemExit("No results found.")
-    DisplaySubtitleSearchResults(search_results)
-    if options.download == 'none':
-        raise SystemExit
-    elif options.download == 'first':
-        if len(search_results) > 1:
-            print("Defaulting to first result (try --interactive).")
-        AutoDownloadAndSave(file, search_results[0])
-    elif options.download == 'all':
-        downloaded = {}
-        for search_result in search_results:
-            AutoDownloadAndSave(file, search_result, downloaded)
-    elif options.download == 'query':
-        n = query_num("Enter result to download [1..%d]:" % (len(search_results)),
-                      1, len(search_results))
-        AutoDownloadAndSave(file, search_results[n-1])
-    elif isnumber(options.download):
-        search_result = select_search_result_by_id(options.download, search_results)
-        AutoDownloadAndSave(file, search_result)
-    else:
-        raise Exception("internal error: bad option.download=%s" % options.download)
+        else:
+            search_results = SearchSubtitlesByHash(file, options.lang)
+            if not search_results and options.imdb_id is not None:
+                print("No results found by hash, trying IMDB id")
+                search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
+        if not search_results:
+            print("No results found.", file=sys.stderr)
+            no_search_results = no_search_results + 1
+            continue
+
+        DisplaySubtitleSearchResults(search_results)
+        if options.download == 'none':
+            raise SystemExit
+        elif options.download == 'first':
+            if len(search_results) > 1:
+                print("Defaulting to first result (try --interactive).")
+            AutoDownloadAndSave(file, search_results[0])
+        elif options.download == 'all':
+            downloaded = {}
+            for search_result in search_results:
+                AutoDownloadAndSave(file, search_result, downloaded)
+        elif options.download == 'query':
+            n = query_num("Enter result to download [1..%d]:" % (len(search_results)),
+                          1, len(search_results))
+            AutoDownloadAndSave(file, search_results[n-1])
+        elif isnumber(options.download):
+            search_result = select_search_result_by_id(options.download, search_results)
+            AutoDownloadAndSave(file, search_result)
+        else:
+            raise Exception("internal error: bad option.download=%s" % options.download)
+
+    if no_search_results > 0:
+        raise SystemExit("One or more subtitles were not found.")
 
 main(sys.argv[1:])
