@@ -55,13 +55,13 @@ http://code.google.com/p/subdl/'''
 
 import os, sys
 import struct
-import xmlrpclib
-import StringIO, gzip, base64
+import xmlrpc.client
+import io, gzip, base64
 import getopt
 import re
 
 osdb_server = "http://api.opensubtitles.org/xml-rpc"
-xmlrpc_server = xmlrpclib.Server(osdb_server)
+xmlrpc_server = xmlrpc.client.ServerProxy(osdb_server)
 login = xmlrpc_server.LogIn("", "", "en", NAME+" "+VERSION)
 osdb_token = login["token"]
 
@@ -72,7 +72,7 @@ options.download = 'first'
 options.output = None
 options.existing = 'abort'
 options.imdb_id = None
-options.force_imdb = False;
+options.force_imdb = False
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -85,19 +85,18 @@ def file_base(filename):
     return filename[:filename.rfind('.')]
 
 def gunzipstr(zs):
-    return gzip.GzipFile(fileobj=StringIO.StringIO(zs)).read()
+    return gzip.open(io.BytesIO(zs)).read()
 
 def writefile(filename, str):
     try:
-        open(filename,'wb').write(str)
-    except Exception, e:
-        raise SystemExit ("Error writing to %s: %s" %(filename, e))
+        open(filename, 'wb').write(str)
+    except Exception as e:
+        raise SystemExit("Error writing to %s: %s" % (filename, e))
 
 def query_num(s, min, max):
     while True:
-        print s,
         try:
-            n = raw_input()
+            n = input(s)
         except KeyboardInterrupt:
             raise SystemExit("Aborted")
         try:
@@ -109,9 +108,8 @@ def query_num(s, min, max):
 
 def query_yn(s):
     while True:
-        print s,
         try:
-            s = raw_input().lower()
+            s = input(s).lower()
         except KeyboardInterrupt:
             raise SystemExit("Aborted")
         if s.startswith('y'):
@@ -127,12 +125,12 @@ def movie_hash(name):
     filesize = os.path.getsize(name)
     hash = filesize
     if filesize < 65536 * 2:
-        raise Exception("Error hashing %s: file too small" %(name))
-    for x in range(65536/bytesize):
+        raise Exception("Error hashing %s: file too small" % (name))
+    for x in range(int(65536/bytesize)):
         hash += struct.unpack(longlongformat, f.read(bytesize))[0]
         hash &= 0xFFFFFFFFFFFFFFFF
-    f.seek(filesize-65536,0)
-    for x in range(65536/bytesize):
+    f.seek(filesize-65536, 0)
+    for x in range(int(65536/bytesize)):
         hash += struct.unpack(longlongformat, f.read(bytesize))[0]
         hash &= 0xFFFFFFFFFFFFFFFF
     f.close()
@@ -141,27 +139,27 @@ def movie_hash(name):
 def SearchSubtitlesByHash(filename, langs_search):
     moviehash = movie_hash(filename)
     moviebytesize = os.path.getsize(filename)
-    searchlist = [({'sublanguageid':langs_search,
-                    'moviehash':moviehash,
-                    'moviebytesize':str(moviebytesize)})]
-    print >>sys.stderr, "Searching for subtitles for moviehash=%s..." %(moviehash)
+    searchlist = [({'sublanguageid': langs_search,
+                    'moviehash': moviehash,
+                    'moviebytesize': str(moviebytesize)})]
+    print("Searching for subtitles for moviehash=%s..." % (moviehash), file=sys.stderr)
     try:
-        results = xmlrpc_server.SearchSubtitles(osdb_token,searchlist)
-    except Exception, e:
-        raise SystemExit("Error in XMLRPC SearchSubtitles call: %s"%e)
+        results = xmlrpc_server.SearchSubtitles(osdb_token, searchlist)
+    except Exception as e:
+        raise SystemExit("Error in XMLRPC SearchSubtitles call: %s" % e)
     data = results['data']
     return data and [SubtitleSearchResult(d) for d in data]
 
 def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
-    result = re.search("\d+", imdb_id);
-    imdb_id = result.group(0);
-    searchlist = [({'sublanguageid':langs_search,
-                    'imdbid':imdb_id})]
-    print >>sys.stderr, "Searching for subtitles for IMDB id=%s..." %(imdb_id)
+    result = re.search("\d+", imdb_id)
+    imdb_id = result.group(0)
+    searchlist = [({'sublanguageid': langs_search,
+                    'imdbid': imdb_id})]
+    print("Searching for subtitles for IMDB id=%s..." % (imdb_id), file=sys.stderr)
     try:
-        results = xmlrpc_server.SearchSubtitles(osdb_token,searchlist)
-    except Exception, e:
-        raise SystemExit("Error in XMLRPC SearchSubtitles call: %s"%e)
+        results = xmlrpc_server.SearchSubtitles(osdb_token, searchlist)
+    except Exception as e:
+        raise SystemExit("Error in XMLRPC SearchSubtitles call: %s" % e)
     data = results['data']
     return data and [SubtitleSearchResult(d) for d in data]
 
@@ -169,10 +167,10 @@ def format_movie_name(s):
     if s.startswith('"') and s.endswith('"'):
         s = s[1:-1]
     s = s.replace('"', "'")
-    return '"%s"' %s
+    return '"%s"' % s
 
 def DisplaySubtitleSearchResults(search_results):
-    print "Found %d results:" %(len(search_results))
+    print("Found %d results:" % (len(search_results)))
     idsubtitle_maxlen = 0
     moviename_maxlen = 0
     downloads_maxlen = 0
@@ -185,7 +183,7 @@ def DisplaySubtitleSearchResults(search_results):
         downloads_maxlen = max(downloads_maxlen, len(downloads))
 
     n = 0
-    count_maxlen = len(`len(search_results)`)
+    count_maxlen = len(repr(len(search_results)))
     for subtitle in search_results:
         n += 1
         idsubtitle = subtitle.IDSubtitleFile
@@ -198,46 +196,45 @@ def DisplaySubtitleSearchResults(search_results):
         downloads = subtitle.SubDownloadsCnt
         # idmovie = subtitle.IDMovie
         # idmovieimdb = subtitle.IDMovieImdb
-        print '',
         if options.download == 'query':
-            print "%s."%`n`.rjust(count_maxlen),
-        print "#%s [%s] [Rat:%s DL:%s] %s %s "%(idsubtitle.rjust(idsubtitle_maxlen),
+            print("%s." % repr(n).rjust(count_maxlen), end=" ")
+        print("#%s [%s] [Rat:%s DL:%s] %s %s " % (idsubtitle.rjust(idsubtitle_maxlen),
                                                 lang,
                                                 rating.rjust(4),
                                                 downloads.rjust(downloads_maxlen),
                                                 moviename.ljust(moviename_maxlen),
-                                                filename.encode('utf8'))
+                                                filename.encode('utf8')))
 
 def DownloadSubtitle(sub_id):
     '''Download subtitle #sub_id and return subtitle text as string.'''
     try:
-        answer = xmlrpc_server.DownloadSubtitles(osdb_token,[sub_id])
+        answer = xmlrpc_server.DownloadSubtitles(osdb_token, [sub_id])
         subtitle_compressed = answer['data'][0]['data']
-    except Exception, e:
-        raise SystemExit("Error in XMLRPC DownloadSubtitles call: %s"%e)
-    return gunzipstr(base64.decodestring(subtitle_compressed))
+    except Exception as e:
+        raise SystemExit("Error in XMLRPC DownloadSubtitles call: %s" % e)
+    return gunzipstr(base64.b64decode(subtitle_compressed))
 
-def DownloadAndSaveSubtitle(sub_id,destfilename):
+def DownloadAndSaveSubtitle(sub_id, destfilename):
     if os.path.exists(destfilename):
         if options.existing == 'abort':
-            print "Subtitle %s already exists; aborting (try --interactive)."%destfilename
+            print("Subtitle %s already exists; aborting (try --interactive)." % destfilename)
             raise SystemExit(3)
         elif options.existing == 'bypass':
-            print "Subtitle %s already exists; bypassing."%destfilename
+            print("Subtitle %s already exists; bypassing." % destfilename)
             return
         elif options.existing == 'overwrite':
-            print "Subtitle %s already exists; overwriting."%destfilename
+            print("Subtitle %s already exists; overwriting." % destfilename)
         elif options.existing == 'query':
-            if query_yn("Subtitle %s already exists.  Overwrite [y/n]?"%destfilename):
+            if query_yn("Subtitle %s already exists.  Overwrite [y/n]?" % destfilename):
                 pass
             else:
                 raise SystemExit("File not overwritten.")
         else:
-            raise Exception("internal error: bad option.existing=%s"%options.existing)
-    print >>sys.stderr, "Downloading #%s to %s..." %(sub_id, destfilename),
+            raise Exception("internal error: bad option.existing=%s" % options.existing)
+    print("Downloading #%s to %s..." % (sub_id, destfilename), file=sys.stderr, end=" ")
     s = DownloadSubtitle(sub_id)
     writefile(destfilename, s)
-    print >>sys.stderr, "done, wrote %d bytes."%(len(s))
+    print("done, wrote %d bytes."% (len(s)), file=sys.stderr)
 
 def replace_fmt(input, replacements):
     output = ''
@@ -250,7 +247,7 @@ def replace_fmt(input, replacements):
             try:
                 output += replacements[c]
             except:
-                raise SystemExit("Bad '%%s' in format specifier" %c)
+                raise SystemExit("Bad '%%s' in format specifier" % c)
         else:
             output += c
         i += 1
@@ -270,11 +267,11 @@ def format_subtitle_output_filename(videoname, search_result):
     assert output_filename != videoname
     return output_filename
 
-def AutoDownloadAndSave(videoname, search_result, downloaded = None):
+def AutoDownloadAndSave(videoname, search_result, downloaded=None):
     output_filename = format_subtitle_output_filename(videoname, search_result)
     if downloaded is not None:
         if output_filename in downloaded:
-            raise SystemExit("Already wrote to %s!  Uniquify output filename format."%output_filename)
+            raise SystemExit("Already wrote to %s!  Uniquify output filename format." % output_filename)
         downloaded[output_filename] = 1
     DownloadAndSaveSubtitle(search_result.IDSubtitleFile, output_filename)
 
@@ -282,10 +279,10 @@ def select_search_result_by_id(id, search_results):
     for search_result in search_results:
         if search_result.IDSubtitleFile == id:
             return search_result
-    raise SystemExit("Search results did not contain subtitle with id %s"%id)
+    raise SystemExit("Search results did not contain subtitle with id %s" % id)
 
 def help():
-    print __doc__
+    print(__doc__)
     raise SystemExit
 
 def isnumber(value):
@@ -297,7 +294,7 @@ def isnumber(value):
 def ListLanguages():
     languages = xmlrpc_server.GetSubLanguages('')['data']
     for language in languages:
-        print language['SubLanguageID'], language['ISO639'], language['LanguageName']
+        print(language['SubLanguageID'], language['ISO639'], language['LanguageName'])
     raise SystemExit
 
 def default_output_fmt():
@@ -316,16 +313,16 @@ def parseargs(args):
                 'download=', 'output=', 'interactive',
                 'list-languages', 'imdb-id=', 'force-imdb',
                 'help', 'version', 'versionx'])
-    except getopt.GetoptError, e:
-        raise SystemExit("%s: %s (see --help)"%(sys.argv[0],e))
+    except getopt.GetoptError as e:
+        raise SystemExit("%s: %s (see --help)" % (sys.argv[0], e))
     for option, value in opts:
         if option == '--help' or option == '-h' or option == '-?':
             help()
         elif option == '--versionx':
-            print VERSION
+            print(VERSION)
             raise SystemExit
         elif option == '--version':
-            print "%s %s" %(NAME, VERSION)
+            print("%s %s" % (NAME, VERSION))
             raise SystemExit
         elif option == '--existing':
             if value in ['abort', 'overwrite', 'bypass', 'query']:
@@ -355,25 +352,25 @@ def parseargs(args):
         elif option == '--list-languages':
             ListLanguages()
         else:
-            raise SystemExit("internal error: bad option '%s'"%option)
+            raise SystemExit("internal error: bad option '%s'" % option)
     if not options.output:
         options.output = default_output_fmt()
     if len(arguments) != 1:
-        raise SystemExit("syntax: %s [options] filename.avi  (see --help)" %(sys.argv[0]))
+        raise SystemExit("syntax: %s [options] filename.avi  (see --help)" % (sys.argv[0]))
     return arguments[0]
 
 def main(args):
     file = parseargs(args)
     if not os.path.exists(file):
-        raise SystemExit("can't find file '%s'"%file)
+        raise SystemExit("can't find file '%s'" % file)
     if options.force_imdb:
-        if options.imdb_id == None:
+        if options.imdb_id is None:
             raise SystemExit("With --force-imdb a --imdb-id must be provided.")
         search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
     else:
         search_results = SearchSubtitlesByHash(file, options.lang)
-        if not search_results and options.imdb_id != None:
-            print "No results found by hash, trying IMDB id";
+        if not search_results and options.imdb_id is not None:
+            print("No results found by hash, trying IMDB id")
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
     if not search_results:
         raise SystemExit("No results found.")
@@ -382,20 +379,20 @@ def main(args):
         raise SystemExit
     elif options.download == 'first':
         if len(search_results) > 1:
-            print "Defaulting to first result (try --interactive)."
+            print("Defaulting to first result (try --interactive).")
         AutoDownloadAndSave(file, search_results[0])
     elif options.download == 'all':
         downloaded = {}
         for search_result in search_results:
             AutoDownloadAndSave(file, search_result, downloaded)
     elif options.download == 'query':
-        n = query_num("Enter result to download [1..%d]:"%(len(search_results)),
+        n = query_num("Enter result to download [1..%d]:" % (len(search_results)),
                       1, len(search_results))
         AutoDownloadAndSave(file, search_results[n-1])
     elif isnumber(options.download):
         search_result = select_search_result_by_id(options.download, search_results)
         AutoDownloadAndSave(file, search_result)
     else:
-        raise Exception("internal error: bad option.download=%s"%options.download)
+        raise Exception("internal error: bad option.download=%s" % options.download)
 
 main(sys.argv[1:])
