@@ -165,6 +165,18 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     data = results['data']
     return data and [SubtitleSearchResult(d) for d in data]
 
+def SearchSubtitlesByFileName(filename, langs_search):
+    file_basename = os.path.basename(filename)
+    searchlist = [({'sublanguageid': langs_search,
+                    'query': file_basename})]
+    print("Searching for subtitles for query=%s..." % (file_basename), file=sys.stderr)
+    try:
+        results = xmlrpc_server.SearchSubtitles(osdb_token, searchlist)
+    except Exception as e:
+        raise SystemExit("Error in XMLRPC SearchSubtitles call: %s" % e)
+    data = results['data']
+    return data and [SubtitleSearchResult(d) for d in data]
+
 def format_movie_name(s):
     if s.startswith('"') and s.endswith('"'):
         s = s[1:-1]
@@ -386,6 +398,9 @@ def main(args):
             if not search_results and options.imdb_id is not None:
                 print("No results found by hash, trying IMDB id")
                 search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
+            elif not search_results:
+                print("No results found by hash, trying filename")
+                search_results = SearchSubtitlesByFileName(file, options.lang)
         if not search_results:
             print("No results found.", file=sys.stderr)
             no_search_results = no_search_results + 1
