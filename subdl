@@ -83,10 +83,10 @@ class SubtitleSearchResult:
         self.__dict__ = dict
 
 def file_ext(filename):
-    return filename[filename.rfind('.')+1:]
+    return os.path.splitext(filename)[1][1:]
 
 def file_base(filename):
-    return filename[:filename.rfind('.')]
+    return os.path.splitext(filename)[0]
 
 def gunzipstr(zs):
     with gzip.open(io.BytesIO(zs)) as gz:
@@ -169,7 +169,7 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     return data and [SubtitleSearchResult(d) for d in data]
 
 def SearchSubtitlesByFileName(filename, langs_search):
-    file_name, file_ext = os.path.splitext(os.path.basename(filename))
+    file_name = file_base(filename)
     searchlist = [({'sublanguageid': langs_search,
                     'query': file_name})]
     print("Searching for subtitles for query=%s..." % (file_name), file=sys.stderr)
