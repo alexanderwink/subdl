@@ -398,7 +398,7 @@ def main(args):
                 raise SystemExit("With --force-imdb a --imdb-id must be provided.")
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
         elif options.force_filename:
-        	search_results = SearchSubtitlesByFileName(file, options.lang)
+            search_results = SearchSubtitlesByFileName(file, options.lang)
         else:
             search_results = SearchSubtitlesByHash(file, options.lang)
             if not search_results and options.imdb_id is not None:
