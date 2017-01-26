@@ -42,6 +42,7 @@ Options:
   --imdb-id=id               Query by IMDB id. Hash is tried first unless --force-imdb
                              is used. IMDB URLs are also accepted.
   --force-imdb               Force IMDB search. --imdb-id must be specified.
+  --force-filename           Force search using filename.
   --interactive, -i          Equivalent to --download=query --existing=query.
   '''
 
@@ -75,6 +76,7 @@ options.output = None
 options.existing = 'abort'
 options.imdb_id = None
 options.force_imdb = False
+options.force_filename = False
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -329,7 +331,7 @@ def parseargs(args):
                 'existing=', 'lang=', 'search-only=',
                 'download=', 'output=', 'interactive',
                 'list-languages', 'imdb-id=', 'force-imdb',
-                'help', 'version', 'versionx'])
+                'force-filename', 'help', 'version', 'versionx'])
     except getopt.GetoptError as e:
         raise SystemExit("%s: %s (see --help)" % (sys.argv[0], e))
     for option, value in opts:
@@ -363,6 +365,8 @@ def parseargs(args):
             options.imdb_id = value
         elif option == '--force-imdb':
             options.force_imdb = True
+        elif option == '--force-filename':
+            options.force_filename = True
         elif option == '--interactive' or option == '-i':
             options.download = 'query'
             options.existing = 'query'
@@ -393,6 +397,8 @@ def main(args):
             if options.imdb_id is None:
                 raise SystemExit("With --force-imdb a --imdb-id must be provided.")
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
+        elif options.force_filename:
+        	search_results = SearchSubtitlesByFileName(file, options.lang)
         else:
             search_results = SearchSubtitlesByHash(file, options.lang)
             if not search_results and options.imdb_id is not None:
