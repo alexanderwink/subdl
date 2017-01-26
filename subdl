@@ -63,7 +63,7 @@ import io, gzip, base64
 import getopt
 import re
 
-osdb_server = "http://api.opensubtitles.org/xml-rpc"
+osdb_server = "https://api.opensubtitles.org/xml-rpc"
 xmlrpc_server = xmlrpc.client.ServerProxy(osdb_server)
 login = xmlrpc_server.LogIn("", "", "en", NAME+" "+VERSION)
 osdb_token = login["token"]
