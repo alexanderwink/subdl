@@ -256,34 +256,16 @@ def DownloadAndSaveSubtitle(sub_id, destfilename):
     writefile(destfilename, s)
     print("done, wrote %d bytes."% (len(s)), file=sys.stderr)
 
-def replace_fmt(input, replacements):
-    output = ''
-    i = 0
-    while i < len(input):
-        c = input[i]
-        if c == '%':
-            i += 1
-            c = input[i]
-            try:
-                output += replacements[c]
-            except:
-                raise SystemExit("Bad '%%s' in format specifier" % c)
-        else:
-            output += c
-        i += 1
-    return output
-
 def format_subtitle_output_filename(videoname, search_result):
     subname = search_result.SubFileName
     repl = {
-        '%': '%',
         'I': search_result.IDSubtitleFile,
         'm': file_base(videoname), 'M': file_ext(videoname),
         's': file_base(subname),   'S': file_ext(subname),
         'l': search_result.LanguageName,
         'L': search_result.ISO639
         }
-    output_filename = replace_fmt(options.output, repl)
+    output_filename = options.output.format(**repl)
     assert output_filename != videoname
     return output_filename
 
@@ -319,11 +301,11 @@ def ListLanguages():
 
 def default_output_fmt():
     if options.download == 'all':
-        return "%m.%L.%I.%S"
+        return "{m}.{L}.{I}.{S}"
     elif options.lang == 'all' or ',' in options.lang:
-        return "%m.%L.%S"
+        return "{m}.{L}.{S}"
     else:
-        return "%m.%S"
+        return "{m}.{S}"
 
 
 def parseargs(args):
