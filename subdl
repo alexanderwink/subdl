@@ -166,10 +166,10 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     return data and [SubtitleSearchResult(d) for d in data]
 
 def SearchSubtitlesByFileName(filename, langs_search):
-    file_basename = os.path.basename(filename)
+    file_name, file_ext = os.path.splitext(os.path.basename(filename))
     searchlist = [({'sublanguageid': langs_search,
-                    'query': file_basename})]
-    print("Searching for subtitles for query=%s..." % (file_basename), file=sys.stderr)
+                    'query': file_name})]
+    print("Searching for subtitles for query=%s..." % (file_name), file=sys.stderr)
     try:
         results = xmlrpc_server.SearchSubtitles(osdb_token, searchlist)
     except Exception as e:
