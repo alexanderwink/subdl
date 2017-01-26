@@ -89,11 +89,13 @@ def file_base(filename):
     return filename[:filename.rfind('.')]
 
 def gunzipstr(zs):
-    return gzip.open(io.BytesIO(zs)).read()
+    with gzip.open(io.BytesIO(zs)) as gz:
+        return gz.read()
 
 def writefile(filename, str):
     try:
-        open(filename, 'wb').write(str)
+        with open(filename, 'wb') as f:
+            f.write(str)
     except Exception as e:
         raise SystemExit("Error writing to %s: %s" % (filename, e))
 
@@ -125,19 +127,18 @@ def movie_hash(name):
     longlongformat = '<Q'
     bytesize = struct.calcsize(longlongformat)
     assert bytesize == 8
-    f = open(name, "rb")
     filesize = os.path.getsize(name)
     hash = filesize
     if filesize < 65536 * 2:
         raise Exception("Error hashing %s: file too small" % (name))
-    for x in range(int(65536/bytesize)):
-        hash += struct.unpack(longlongformat, f.read(bytesize))[0]
-        hash &= 0xFFFFFFFFFFFFFFFF
-    f.seek(filesize-65536, 0)
-    for x in range(int(65536/bytesize)):
-        hash += struct.unpack(longlongformat, f.read(bytesize))[0]
-        hash &= 0xFFFFFFFFFFFFFFFF
-    f.close()
+    with open(name, "rb") as f:
+        for x in range(int(65536/bytesize)):
+            hash += struct.unpack(longlongformat, f.read(bytesize))[0]
+            hash &= 0xFFFFFFFFFFFFFFFF
+        f.seek(filesize-65536, 0)
+        for x in range(int(65536/bytesize)):
+            hash += struct.unpack(longlongformat, f.read(bytesize))[0]
+            hash &= 0xFFFFFFFFFFFFFFFF
     return "%016x" % hash
 
 def SearchSubtitlesByHash(filename, langs_search):
