@@ -114,15 +114,15 @@ def writefile(filename, str):
     except Exception as e:
         raise SystemExit("Error writing to %s: %s" % (filename, e))
 
-def query_num(s, min, max):
+def query_num(s, low, high):
     while True:
         try:
-            n = input(s)
+            n = input("%s [%d..%d] " % (s, low, high))
         except KeyboardInterrupt:
             raise SystemExit("Aborted")
         try:
             n = int(n)
-            if n >= min and n <= max:
+            if low <= n <= high:
                 return n
         except:
             pass
@@ -130,12 +130,12 @@ def query_num(s, min, max):
 def query_yn(s):
     while True:
         try:
-            s = input(s).lower()
+            r = input("%s [y/n] " % s).lower()
         except KeyboardInterrupt:
             raise SystemExit("Aborted")
-        if s.startswith('y'):
+        if r.startswith('y'):
             return True
-        elif s.startswith('n'):
+        elif r.startswith('n'):
             return False
 
 def filtersub(s):
@@ -147,7 +147,7 @@ def filtersub(s):
     for i in range(len(subs) - 1, -1, -1):
         text = subs[i][2]
         if filter_pattern.search(text):
-            print("removed at", i + 1, ":", text)
+            print("Removed", i + 1, ":", text)
             del subs[i]
     for i in range(len(subs)):
         subs[i][0] = str(i + 1).encode()
@@ -276,7 +276,7 @@ def DownloadAndSaveSubtitle(sub_id, destfilename):
         elif options.existing == 'overwrite':
             print("Subtitle %s already exists; overwriting." % destfilename)
         elif options.existing == 'query':
-            if query_yn("Subtitle %s already exists.  Overwrite [y/n]?" % destfilename):
+            if query_yn("Subtitle %s already exists. Overwrite?" % destfilename):
                 pass
             else:
                 raise SystemExit("File not overwritten.")
@@ -306,7 +306,7 @@ def AutoDownloadAndSave(videoname, search_result, downloaded=None):
     output_filename = format_subtitle_output_filename(videoname, search_result)
     if downloaded is not None:
         if output_filename in downloaded:
-            raise SystemExit("Already wrote to %s!  Uniquify output filename format." % output_filename)
+            raise SystemExit("Already wrote to %s! Uniquify output filename format." % output_filename)
         downloaded[output_filename] = 1
     DownloadAndSaveSubtitle(search_result.IDSubtitleFile, output_filename)
 
@@ -396,7 +396,7 @@ def parseargs(args):
     if not options.output:
         options.output = default_output_fmt()
     if len(arguments) == 0:
-        raise SystemExit("syntax: %s [options] filename.avi  (see --help)" % (sys.argv[0]))
+        raise SystemExit("syntax: %s [options] filename.avi (see --help)" % (sys.argv[0]))
     if len(arguments) > 1 and options.force_imdb:
         raise SystemExit("Can't use --force-imdb with multiple files.")
     if len(arguments) > 1 and isnumber(options.download):
@@ -446,7 +446,7 @@ def main(args):
             for search_result in search_results:
                 AutoDownloadAndSave(file, search_result, downloaded)
         elif options.download == 'query':
-            n = query_num("Enter result to download [1..%d]:" % (len(search_results)),
+            n = query_num("Enter result to download:",
                           1, len(search_results))
             AutoDownloadAndSave(file, search_results[n-1])
         elif options.download == 'best-rating':
