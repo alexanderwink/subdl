@@ -63,7 +63,7 @@ import io, gzip, base64
 import getopt
 import re
 
-osdb_server = "http://api.opensubtitles.org/xml-rpc"
+osdb_server = "https://api.opensubtitles.org/xml-rpc"
 xmlrpc_server = xmlrpc.client.ServerProxy(osdb_server)
 login = xmlrpc_server.LogIn("", "", "en", NAME+" "+VERSION)
 osdb_token = login["token"]
@@ -83,17 +83,19 @@ class SubtitleSearchResult:
         self.__dict__ = dict
 
 def file_ext(filename):
-    return filename[filename.rfind('.')+1:]
+    return os.path.splitext(filename)[1][1:]
 
 def file_base(filename):
-    return filename[:filename.rfind('.')]
+    return os.path.splitext(filename)[0]
 
 def gunzipstr(zs):
-    return gzip.open(io.BytesIO(zs)).read()
+    with gzip.open(io.BytesIO(zs)) as gz:
+        return gz.read()
 
 def writefile(filename, str):
     try:
-        open(filename, 'wb').write(str)
+        with open(filename, 'wb') as f:
+            f.write(str)
     except Exception as e:
         raise SystemExit("Error writing to %s: %s" % (filename, e))
 
@@ -125,19 +127,18 @@ def movie_hash(name):
     longlongformat = '<Q'
     bytesize = struct.calcsize(longlongformat)
     assert bytesize == 8
-    f = open(name, "rb")
     filesize = os.path.getsize(name)
     hash = filesize
     if filesize < 65536 * 2:
         raise Exception("Error hashing %s: file too small" % (name))
-    for x in range(int(65536/bytesize)):
-        hash += struct.unpack(longlongformat, f.read(bytesize))[0]
-        hash &= 0xFFFFFFFFFFFFFFFF
-    f.seek(filesize-65536, 0)
-    for x in range(int(65536/bytesize)):
-        hash += struct.unpack(longlongformat, f.read(bytesize))[0]
-        hash &= 0xFFFFFFFFFFFFFFFF
-    f.close()
+    with open(name, "rb") as f:
+        for x in range(int(65536/bytesize)):
+            hash += struct.unpack(longlongformat, f.read(bytesize))[0]
+            hash &= 0xFFFFFFFFFFFFFFFF
+        f.seek(filesize-65536, 0)
+        for x in range(int(65536/bytesize)):
+            hash += struct.unpack(longlongformat, f.read(bytesize))[0]
+            hash &= 0xFFFFFFFFFFFFFFFF
     return "%016x" % hash
 
 def SearchSubtitlesByHash(filename, langs_search):
@@ -168,7 +169,7 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     return data and [SubtitleSearchResult(d) for d in data]
 
 def SearchSubtitlesByFileName(filename, langs_search):
-    file_name, file_ext = os.path.splitext(os.path.basename(filename))
+    file_name = file_base(os.path.basename(filename))
     searchlist = [({'sublanguageid': langs_search,
                     'query': file_name})]
     print("Searching for subtitles for query=%s..." % (file_name), file=sys.stderr)
@@ -255,34 +256,16 @@ def DownloadAndSaveSubtitle(sub_id, destfilename):
     writefile(destfilename, s)
     print("done, wrote %d bytes."% (len(s)), file=sys.stderr)
 
-def replace_fmt(input, replacements):
-    output = ''
-    i = 0
-    while i < len(input):
-        c = input[i]
-        if c == '%':
-            i += 1
-            c = input[i]
-            try:
-                output += replacements[c]
-            except:
-                raise SystemExit("Bad '%%s' in format specifier" % c)
-        else:
-            output += c
-        i += 1
-    return output
-
 def format_subtitle_output_filename(videoname, search_result):
     subname = search_result.SubFileName
     repl = {
-        '%': '%',
         'I': search_result.IDSubtitleFile,
         'm': file_base(videoname), 'M': file_ext(videoname),
         's': file_base(subname),   'S': file_ext(subname),
         'l': search_result.LanguageName,
         'L': search_result.ISO639
         }
-    output_filename = replace_fmt(options.output, repl)
+    output_filename = options.output.format(**repl)
     assert output_filename != videoname
     return output_filename
 
@@ -318,11 +301,11 @@ def ListLanguages():
 
 def default_output_fmt():
     if options.download == 'all':
-        return "%m.%L.%I.%S"
+        return "{m}.{L}.{I}.{S}"
     elif options.lang == 'all' or ',' in options.lang:
-        return "%m.%L.%S"
+        return "{m}.{L}.{S}"
     else:
-        return "%m.%S"
+        return "{m}.{S}"
 
 
 def parseargs(args):
@@ -398,7 +381,7 @@ def main(args):
                 raise SystemExit("With --force-imdb a --imdb-id must be provided.")
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
         elif options.force_filename:
-        	search_results = SearchSubtitlesByFileName(file, options.lang)
+            search_results = SearchSubtitlesByFileName(file, options.lang)
         else:
             search_results = SearchSubtitlesByHash(file, options.lang)
             if not search_results and options.imdb_id is not None:
