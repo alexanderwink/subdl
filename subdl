@@ -169,7 +169,7 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     return data and [SubtitleSearchResult(d) for d in data]
 
 def SearchSubtitlesByFileName(filename, langs_search):
-    file_name = file_base(filename)
+    file_name = file_base(os.path.basename(filename))
     searchlist = [({'sublanguageid': langs_search,
                     'query': file_name})]
     print("Searching for subtitles for query=%s..." % (file_name), file=sys.stderr)
