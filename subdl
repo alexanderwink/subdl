@@ -75,9 +75,15 @@ BLACKLIST = [
     'joycasino',
     'bitninja\.io',
     'Please rate this subtitle at www\.osdb\.link',
-    'allsubs\.org',
+    'allsubs',
     'firebit\.org',
+    'humanguardians\.com',
     'subtitles by',
+    'recast\.ai',
+    'by mstoll',
+    'subs corrected',
+    'by tronar',
+    'titlovi',
     '^_$',
     '^- _$',
 ]
@@ -145,6 +151,9 @@ def filtersub(s):
     subs = [re.split(b'\r?\n', sub, 2) for sub in subs]
     filter_pattern = re.compile('|'.join(BLACKLIST).encode(), re.M | re.I)
     for i in range(len(subs) - 1, -1, -1):
+        if len(subs[i]) < 3:
+            del subs[i]
+            continue
         text = subs[i][2]
         if filter_pattern.search(text):
             print("Removed", i + 1, ":", text)
