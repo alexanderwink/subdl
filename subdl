@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # subdl - command-line tool to download subtitles from opensubtitles.org.
 #
@@ -19,6 +19,8 @@ Options:
   --lang=LANGUAGES           Comma-separated list of languages in 3-letter code, e.g.
                              'eng,spa,fre', or 'all' for all.  Default is 'eng'.
   --list-languages           List available languages and exit.
+  --username                 opensubtitles.org username
+  --password                 opensubtitles.org password
   --download=ID              Download a particular subtitle by numeric ID.
   --download=first           Download the first search result [default].
   --download=all             Download all search results.
@@ -64,10 +66,10 @@ import io, gzip, base64
 import getopt
 import re
 
-osdb_server = "https://api.opensubtitles.org/xml-rpc"
-xmlrpc_server = xmlrpc.client.ServerProxy(osdb_server)
-login = xmlrpc_server.LogIn("", "", "en", NAME+" "+VERSION)
-osdb_token = login["token"]
+OSDB_SERVER_URI = "https://api.opensubtitles.org/xml-rpc"
+xmlrpc_server = None
+login = None
+osdb_token = None
 
 BLACKLIST = [
     'opensubtitles',
@@ -98,6 +100,8 @@ options.imdb_id = None
 options.force_imdb = False
 options.force_filename = False
 options.filter = False
+options.osdb_username = ''
+options.osdb_password = ''
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -350,6 +354,14 @@ def default_output_fmt():
         return "{m}.{S}"
 
 
+def osdb_connect():
+    global xmlrpc_server, login, osdb_token
+    xmlrpc_server = xmlrpc.client.ServerProxy(OSDB_SERVER_URI)
+    login = xmlrpc_server.LogIn(options.osdb_username, options.osdb_password, "en", NAME+" "+VERSION)
+    if login['status'] != '200 OK':
+        raise SystemExit("Failed connecting to opensubtitles.org: " + login['status'])
+    osdb_token = login["token"]
+
 def parseargs(args):
     try:
         opts, arguments = getopt.getopt(args, 'h?in', [
@@ -357,7 +369,7 @@ def parseargs(args):
                 'download=', 'output=', 'interactive',
                 'list-languages', 'imdb-id=', 'force-imdb',
                 'force-filename', 'filter', 'help',
-                'version', 'versionx'])
+                'version', 'versionx', 'username=', 'password='])
     except getopt.GetoptError as e:
         raise SystemExit("%s: %s (see --help)" % (sys.argv[0], e))
     for option, value in opts:
@@ -383,6 +395,10 @@ def parseargs(args):
             else:
                 raise SystemExit("Argument to --download must be numeric subtitle id or one: all, first, query, none")
             options.download = value
+        elif option == "--username":
+            options.osdb_username = value
+        elif option == "--password":
+            options.osdb_password = value
         elif option == '-n':
             options.download = 'none'
         elif option == '--output':
@@ -413,9 +429,10 @@ def parseargs(args):
 
     return arguments
 
-
 def main(args):
     files = parseargs(args)
+    osdb_connect()
+
     no_search_results = 0
     for file in files:
         selected_file = '';
