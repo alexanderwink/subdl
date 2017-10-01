@@ -481,4 +481,9 @@ def main(args):
     if no_search_results > 0:
         raise SystemExit("One or more subtitles were not found.")
 
-main(sys.argv[1:])
+
+def cli():
+    main(sys.argv[1:])
+
+if __name__ == "__main__":
+    cli()
