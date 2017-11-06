@@ -28,13 +28,13 @@ Options:
   --download=none, -n        Display search results and exit.
   --output=OUTPUT            Output to specified output filename.  Can include the
                              following format specifiers:
-                             %I subtitle id
-                             %m movie file base      %M movie file extension
-                             %s subtitle file base   %S subtitle file extension
-                             %l language (English)   %L language (2-letter ISO639)
-                             Default is "%m.%S"; if multiple languages are searched,
-                             then the default is "%m.%L.%S"; if --download=all, then
-                             the default is "%m.%L.%I.%S".
+                             {I} subtitle id
+                             {m} movie file base     {M} movie file extension
+                             {s} subtitle file base  {S} subtitle file extension
+                             {l} language (English)  {L} language (2-letter ISO639)
+                             Default is "{m}.{S}"; if multiple languages are searched,
+                             then the default is "{m}.{L}.{S}"; if --download=all, then
+                             the default is "{m}.{L}.{I}.{S}".
   --existing=abort           Abort if output filename already exists [default].
   --existing=bypass          Exit gracefully if output filename already exists.
   --existing=overwrite       Overwrite if output filename already exists.
