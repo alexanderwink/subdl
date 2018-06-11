@@ -21,6 +21,7 @@ Options:
   --list-languages           List available languages and exit.
   --username                 opensubtitles.org username
   --password                 opensubtitles.org password
+  --search                   Use search string to look for subtitles.
   --download=ID              Download a particular subtitle by numeric ID.
   --download=first           Download the first search result [default].
   --download=all             Download all search results.
@@ -102,6 +103,7 @@ options.force_filename = False
 options.filter = False
 options.osdb_username = ''
 options.osdb_password = ''
+options.search = ''
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -212,11 +214,10 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     data = results['data']
     return data and [SubtitleSearchResult(d) for d in data]
 
-def SearchSubtitlesByFileName(filename, langs_search):
-    file_name = file_base(os.path.basename(filename))
+def SearchSubtitlesByString(str, langs_search):
     searchlist = [({'sublanguageid': langs_search,
-                    'query': file_name})]
-    print("Searching for subtitles for query=%s..." % (file_name), file=sys.stderr)
+                    'query': str})]
+    print("Searching for subtitles for query=%s..." % (str), file=sys.stderr)
     try:
         results = xmlrpc_server.SearchSubtitles(osdb_token, searchlist)
     except Exception as e:
@@ -369,7 +370,8 @@ def parseargs(args):
                 'download=', 'output=', 'interactive',
                 'list-languages', 'imdb-id=', 'force-imdb',
                 'force-filename', 'filter', 'help',
-                'version', 'versionx', 'username=', 'password='])
+                'version', 'versionx', 'username=', 'password=',
+                'search='])
     except getopt.GetoptError as e:
         raise SystemExit("%s: %s (see --help)" % (sys.argv[0], e))
     for option, value in opts:
@@ -399,6 +401,8 @@ def parseargs(args):
             options.osdb_username = value
         elif option == "--password":
             options.osdb_password = value
+        elif option == '--search':
+            options.search = value
         elif option == '-n':
             options.download = 'none'
         elif option == '--output':
@@ -436,14 +440,19 @@ def main(args):
     no_search_results = 0
     for file in files:
         selected_file = '';
+        file_name = file_base(os.path.basename(file))
+
         if not os.path.exists(file):
             raise SystemExit("can't find file '%s'" % file)
-        if options.force_imdb:
+
+        if options.search:
+            search_results = SearchSubtitlesByString(options.search, options.lang)
+        elif options.force_imdb:
             if options.imdb_id is None:
                 raise SystemExit("With --force-imdb a --imdb-id must be provided.")
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
         elif options.force_filename:
-            search_results = SearchSubtitlesByFileName(file, options.lang)
+            search_results = SearchSubtitlesByString(file_name, options.lang)
         else:
             search_results = SearchSubtitlesByHash(file, options.lang)
             if not search_results and options.imdb_id is not None:
@@ -451,7 +460,7 @@ def main(args):
                 search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
             elif not search_results:
                 print("No results found by hash, trying filename")
-                search_results = SearchSubtitlesByFileName(file, options.lang)
+                search_results = SearchSubtitlesByString(file_name, options.lang)
         if not search_results:
             print("No results found.", file=sys.stderr)
             no_search_results = no_search_results + 1
