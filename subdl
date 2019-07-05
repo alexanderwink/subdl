@@ -231,8 +231,8 @@ def format_movie_name(s):
     s = s.replace('"', "'")
     return '"%s"' % s
 
-def DisplaySubtitleSearchResults(search_results):
-    print("Found %d results:" % (len(search_results)))
+def DisplaySubtitleSearchResults(search_results, file):
+    print("Found %d results for '%s':" % (len(search_results), file))
     idsubtitle_maxlen = 0
     moviename_maxlen = 0
     downloads_maxlen = 0
@@ -466,7 +466,7 @@ def main(args):
             no_search_results = no_search_results + 1
             continue
 
-        DisplaySubtitleSearchResults(search_results)
+        DisplaySubtitleSearchResults(search_results, file)
         if options.download == 'none':
             raise SystemExit
         elif options.download == 'first':
