@@ -275,7 +275,11 @@ def DownloadSubtitle(sub_id):
     '''Download subtitle #sub_id and return subtitle text as string.'''
     try:
         answer = xmlrpc_server.DownloadSubtitles(osdb_token, [sub_id])
-        subtitle_compressed = answer['data'][0]['data']
+        if answer.get('data') == False:
+                print("\n  ------\n  ERROR: ",answer.get('status'),"\n  ------\n")
+                os._exit()
+        else:
+                subtitle_compressed = answer['data'][0]['data']
     except Exception as e:
         raise SystemExit("Error in XMLRPC DownloadSubtitles call: %s" % e)
     return gunzipstr(base64.b64decode(subtitle_compressed))
