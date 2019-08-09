@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name='subdl',
-    version='1.0.3',
+    version='1.1.2',
     description='Command-line tool to download subtitles from opensubtitles.org',
     long_description=readme(),
     author='Alexander Winkler',
