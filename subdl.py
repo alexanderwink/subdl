@@ -372,7 +372,11 @@ def osdb_connect():
 def glob_arguments(args):
     arguments = []
     for arg in args:
-        arguments += glob.glob(arg, recursive=True)
+        glob_arg = glob.glob(arg, recursive=True)
+        if not glob_arg:
+            arguments += [ arg ]
+        else:
+            arguments += glob_arg
     return arguments
 
 def parseargs(args):
