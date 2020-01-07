@@ -66,7 +66,6 @@ import xmlrpc.client
 import io, gzip, base64
 import getopt
 import re
-import glob
 
 OSDB_SERVER_URI = "https://api.opensubtitles.org/xml-rpc"
 xmlrpc_server = None
@@ -369,12 +368,6 @@ def osdb_connect():
     osdb_token = login["token"]
 
 
-def glob_arguments(args):
-    arguments = []
-    for arg in args:
-        arguments += glob.glob(arg, recursive=True)
-    return arguments
-
 def parseargs(args):
     try:
         opts, arguments = getopt.getopt(args, 'h?in', [
@@ -384,7 +377,6 @@ def parseargs(args):
                 'force-filename', 'filter', 'help',
                 'version', 'versionx', 'username=', 'password=',
                 'search='])
-        arguments = glob_arguments(arguments)
     except getopt.GetoptError as e:
         raise SystemExit("%s: %s (see --help)" % (sys.argv[0], e))
     for option, value in opts:
