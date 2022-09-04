@@ -48,6 +48,7 @@ Options:
   --force-filename           Force search using filename.
   --filter                   Filter blacklisted texts from subtitle.
   --interactive, -i          Equivalent to --download=query --existing=query.
+  --utf8                     Convert output to UTF-8 encoding (Unicode).
   '''
 
 NAME = 'subdl'
@@ -104,6 +105,7 @@ options.filter = False
 options.osdb_username = ''
 options.osdb_password = ''
 options.search = ''
+options.utf8 = False
 
 class SubtitleSearchResult:
     def __init__(self, dict):
@@ -304,6 +306,14 @@ def DownloadAndSaveSubtitle(sub_id, destfilename):
     s = DownloadSubtitle(sub_id)
     if options.filter:
         s = filtersub(s)
+    if options.utf8:
+        import chardet
+        result = chardet.detect(s)
+        if not result["encoding"] in {"ascii", "utf-8"}:
+            print(f"Found encoding {result['encoding']} with a confidence of {result['confidence']*100:.2f}%. Converting to utf8.")
+            # separate lines for easier debugging
+            s = s.decode(result["encoding"]) # bytes -> str
+            s = s.encode("utf8") # str -> bytes
     writefile(destfilename, s)
     print("done, wrote %d bytes."% (len(s)), file=sys.stderr)
 
@@ -372,7 +382,7 @@ def parseargs(args):
     try:
         opts, arguments = getopt.getopt(args, 'h?in', [
                 'existing=', 'lang=', 'search-only=',
-                'download=', 'output=', 'interactive',
+                'download=', 'output=', 'interactive', 'utf8',
                 'list-languages', 'imdb-id=', 'force-imdb',
                 'force-filename', 'filter', 'help',
                 'version', 'versionx', 'username=', 'password=',
@@ -423,6 +433,13 @@ def parseargs(args):
         elif option == '--interactive' or option == '-i':
             options.download = 'query'
             options.existing = 'query'
+        elif option == '--utf8':
+            options.utf8 = True
+            try:
+                import chardet
+            except ModuleNotFoundError:
+                sys.stderr.write("Error: The --utf8 option requires the chardet module from https://pypi.org/project/chardet/ - Hint: pip install chardet\n")
+                sys.exit(1)
         elif option == '--list-languages':
             ListLanguages()
         else:
