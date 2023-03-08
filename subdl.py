@@ -46,6 +46,7 @@ Options:
                              is used. IMDB URLs are also accepted.
   --force-imdb               Force IMDB search. --imdb-id must be specified.
   --force-filename           Force search using filename.
+  --fuzzy-filename           Guess title from filename.
   --filter                   Filter blacklisted texts from subtitle.
   --interactive, -i          Equivalent to --download=query --existing=query.
   --utf8                     Convert output to UTF-8 encoding (Unicode).
@@ -216,6 +217,27 @@ def SearchSubtitlesByIMDBId(filename, langs_search, imdb_id):
     data = results['data']
     return data and [SubtitleSearchResult(d) for d in data]
 
+def SearchSubtitlesByFuzzyString(str, langs_search):
+    str_list = [str]
+    import guessit
+    result = guessit.guessit(str)
+    #print(result) # debug
+    if result.get("type") == "movie":
+        # note: if we put year in parens, year is ignored
+        str_list += [f"""{result.get("title")} {result.get("year")}"""]
+    elif result.get("type") == "episode":
+        str_list += [f"""{result.get("title")} S{result.get("season"):02d}E{result.get("episode"):02d}"""]
+        str_list += [f"""{result.get("title")} {result.get("season")}x{result.get("episode")}"""]
+    else:
+        raise Exception(f"""not implemented: guessit type {result.get("type")}""")
+    print("fuzzy search queries:")
+    for idx, str in enumerate(str_list):
+        print(f"{idx + 1}. {str}")
+    search_results = []
+    for str in str_list:
+        search_results += SearchSubtitlesByString(str, langs_search)
+    return search_results
+
 def SearchSubtitlesByString(str, langs_search):
     searchlist = [({'sublanguageid': langs_search,
                     'query': str})]
@@ -383,6 +405,7 @@ def parseargs(args):
         opts, arguments = getopt.getopt(args, 'h?in', [
                 'existing=', 'lang=', 'search-only=',
                 'download=', 'output=', 'interactive', 'utf8',
+                'fuzzy-filename',
                 'list-languages', 'imdb-id=', 'force-imdb',
                 'force-filename', 'filter', 'help',
                 'version', 'versionx', 'username=', 'password=',
@@ -440,6 +463,13 @@ def parseargs(args):
             except ModuleNotFoundError:
                 sys.stderr.write("Error: The --utf8 option requires the chardet module from https://pypi.org/project/chardet/ - Hint: pip install chardet\n")
                 sys.exit(1)
+        elif option == '--fuzzy-filename':
+            options.fuzzy_filename = True
+            try:
+                import guessit
+            except ModuleNotFoundError:
+                sys.stderr.write("Error: The --fuzzy-filename option requires the guessit module from https://pypi.org/project/guessit/ - Hint: pip install guessit\n")
+                sys.exit(1)
         elif option == '--list-languages':
             ListLanguages()
         else:
@@ -475,6 +505,8 @@ def main(args):
             search_results = SearchSubtitlesByIMDBId(file, options.lang, options.imdb_id)
         elif options.force_filename:
             search_results = SearchSubtitlesByString(file_name, options.lang)
+        elif options.fuzzy_filename:
+            search_results = SearchSubtitlesByFuzzyString(file_name, options.lang)
         else:
             search_results = SearchSubtitlesByHash(file, options.lang)
             if not search_results and options.imdb_id is not None:
