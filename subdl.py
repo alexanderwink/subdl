@@ -435,6 +435,8 @@ def parseargs(args):
             else:
                 raise SystemExit("Argument to --download must be numeric subtitle id or one: all, first, query, none")
             options.download = value
+            if value == 'all':
+                options.existing = 'bypass'
         elif option == "--username":
             options.osdb_username = value
         elif option == "--password":
