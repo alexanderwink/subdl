@@ -18,8 +18,5 @@ setup(
             'subdl = subdl:cli'
         ]
     },
-    packages=[
-        ''
-    ],
     license='GPLv3+'
 )
