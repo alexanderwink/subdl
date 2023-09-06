@@ -411,10 +411,10 @@ def save_login(username='', password=''):
     if username and password:
         with open(file, 'w') as f:
             json.dump(login, f, indent=2)
-        return login.values()
     elif os.path.isfile(file):
         with open(login, 'r') as f:
             return json.load(f).values()
+    return login.values()
 
 
 def osdb_connect():
