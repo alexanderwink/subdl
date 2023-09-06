@@ -412,7 +412,7 @@ def save_login(username='', password=''):
         with open(file, 'w') as f:
             json.dump(login, f, indent=2)
     elif os.path.isfile(file):
-        with open(login, 'r') as f:
+        with open(file, 'r') as f:
             return json.load(f).values()
     return login.values()
 
