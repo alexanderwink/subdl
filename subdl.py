@@ -21,7 +21,7 @@ import xmlrpc.client
 import io, gzip, base64
 import re
 import argparse
-import pdb
+import json
 
 OSDB_SERVER_URI = "https://api.opensubtitles.org/xml-rpc"
 xmlrpc_server = None
@@ -403,11 +403,29 @@ def ListLanguages():
         print(language["SubLanguageID"], language["ISO639"], language["LanguageName"])
 
 
+def save_login(username='', password=''):
+    file = os.path.join(os.getenv('XDG_CONFIG_HOME', os.getenv('HOME')),
+                        'subdl.json')
+
+    login = {'username': username, 'password': password}
+    if username and password:
+        with open(file, 'w') as f:
+            json.dump(login, f, indent=2)
+    elif os.path.isfile(file):
+        with open(file, 'r') as f:
+            return json.load(f).values()
+    return login.values()
+
+
 def osdb_connect():
     global xmlrpc_server, login, osdb_token
+
+    username, password = save_login(options.osdb_username,
+                                    options.osdb_password)
+
     xmlrpc_server = xmlrpc.client.ServerProxy(OSDB_SERVER_URI)
     login = xmlrpc_server.LogIn(
-        options.osdb_username, options.osdb_password, "en", NAME + " " + VERSION
+        username, password, "en", NAME + " " + VERSION
     )
     if login["status"] != "200 OK":
         fatal_error("Failed connecting to opensubtitles.org: " + login["status"])
@@ -506,8 +524,7 @@ def parseargs(args):
         options.download = "query"
         options.existing = "query"
 
-    if (
-        options.download
+    if (options.download
         not in [
             "all",
             "first",
@@ -515,15 +532,14 @@ def parseargs(args):
             "none",
             "best-rating",
             "most-downloaded",
-        ]
-        and not isnumber(options.download)
+        ] and not isnumber(options.download)
     ):
         fatal_error(
             "Argument to --download must be numeric subtitle id or one: all, first, query, none"
         )
 
     if not options.output:
-        options.output = default_output_fmt()
+        options.output = default_output_fmt(options)
 
     if options.utf8:
         try:
@@ -545,7 +561,7 @@ def parseargs(args):
     return options
 
 
-def default_output_fmt():
+def default_output_fmt(options):
     if options.download == "all":
         return "{m}.{L}.{I}.{S}"
     elif options.lang == "all" or "," in options.lang:
